@@ -30,12 +30,10 @@ app.use(express.json());
 
 // --- PostgreSQL Database Connection Setup ---
 const pool = new Pool({
-    // استخدام process.env.DATABASE_URL الذي توفره منصات النشر (مثل Railway/Render)
-    // إذا لم يكن متاحًا، نستخدم سلسلة الاتصال المحلية كاحتياطي للتطوير
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:1234@localhost:5432/chat_app_db',
-    // لبيئة الإنتاج (Heroku, Render, Railway) غالبًا ما تحتاج إلى SSL
-    // Railway و Render يتطلبان { rejectUnauthorized: false } لـ SSL
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    connectionString: process.env.DATABASE_URL, // يجب أن يستخدم هذا دائماً في بيئة النشر
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 pool.connect()
