@@ -42,7 +42,7 @@ const groupFormContainer = document.getElementById('group-form-container'); // �
 const privateFormContainer = document.getElementById('private-form-container'); // حاوية نموذج الفردية
 const modalMessage = document.getElementById('modal-message'); // رسالة داخل المودال
 
-// نماذج الإنشاء الفعلية داخل المودال (التي كانت منفصلة سابقاً)
+// نماذج الإنشاء الفعلية داخل المودال
 const modalCreateGroupChatForm = document.getElementById('modal-create-group-chat-form');
 const modalGroupChatNameInput = document.getElementById('modal-group-chat-name');
 const modalGroupParticipantsInput = document.getElementById('modal-group-participants');
@@ -72,39 +72,27 @@ function displayMessage(element, text, type) {
     }, 5000);
 }
 
-// chat-app/public/client.js
-
-// ... (الكود السابق قبل دالة addChatMessage) ...
-
 function addChatMessage(username, message, timestamp) {
     const item = document.createElement('li');
-    // تنسيق الوقت ليكون مقروءًا
     const time = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // تحديد ما إذا كانت الرسالة من المستخدم الحالي لإضافة الفئة الصحيحة
     if (username === loggedInUsername) {
         item.classList.add('my-message');
     } else {
         item.classList.add('other-message');
     }
 
-    // --- هذا هو الجزء المعدل لضمان عرض الاسم والوقت بشكل صحيح ---
-    // بناء محتوى الرسالة باستخدام قالب النص (template literal)
-    // <bdi> تُستخدم لعزل اتجاه النص لضمان العرض الصحيح للغات المختلطة
     item.innerHTML = `
         <span class="message-meta">
-            <strong><bdi>${username}</bdi></strong> <span class="timestamp"><bdi>${time}</bdi></span>
+            <strong><bdi>${username}</bdi></strong>
+            <span class="timestamp"><bdi>${time}</bdi></span>
         </span>
         <span class="message-content"><bdi>${message}</bdi></span>
     `;
-    // --- نهاية الجزء المعدل ---
 
     messages.appendChild(item);
-    // التمرير إلى الأسفل لعرض أحدث رسالة
     messages.scrollTop = messages.scrollHeight;
 }
-
-// ... (بقية الكود بعد دالة addChatMessage) ...
 
 
 // --- وظائف المحادثات ---
@@ -125,8 +113,7 @@ function loadConversationHistory(convId, convName) {
 
 // لعرض قائمة المحادثات في الشريط الجانبي مع مؤشر الحالة
 function renderConversationsList(conversations) {
-
-    console.log('Rendering conversations list. Current online status map:', usersOnlineStatus);
+    console.log('Rendering conversations list. Current online status map:', usersOnlineStatus); // DEBUG
     conversationsList.innerHTML = ''; // مسح القائمة الحالية قبل إعادة بنائها
     conversations.forEach(conv => {
         const li = document.createElement('li');
@@ -146,13 +133,11 @@ function renderConversationsList(conversations) {
         // تحديد حالة الاتصال للمحادثات الفردية
         let isOnlineForDisplay = false; // افتراضيًا
         let statusClass = 'offline'; // افتراضيًا
-        console.log(`Conv: ${conv.name}, otherUserId: ${conv.otherUserId}, isOnlineForDisplay: ${isOnlineForDisplay}, statusClass: ${statusClass}`);
 
         if (conv.type === 'private' && conv.otherUserId) { // otherUserId سيأتي من الخادم في كائن المحادثة
             isOnlineForDisplay = usersOnlineStatus.has(conv.otherUserId) ? usersOnlineStatus.get(conv.otherUserId) : false;
-            statusClass = isOnlineForDisplay ? 'online' : 'offline';
+            statusClass = isOnlineForplay ? 'online' : 'offline';
             li.dataset.otherUserId = conv.otherUserId; // تخزين otherUserId في dataset الـ li
-            console.log(`DEBUG: Conversation "${conv.name}" (ID: ${conv.id}) is private? ${conv.type === 'private'}, otherUserId: ${conv.otherUserId}, Is otherUserId in usersOnlineStatus? ${usersOnlineStatus.has(conv.otherUserId)}, Its status: ${usersOnlineStatus.get(conv.otherUserId)}`);
         } else if (conv.type === 'group') {
             statusClass = 'offline'; // افتراضي لمجموعات، يمكن تطويره لاحقاً
         }
@@ -179,7 +164,7 @@ function renderConversationsList(conversations) {
         });
         conversationsList.appendChild(li);
 
-        console.log(`Rendering conversation: ${conv.name}, ID: ${conv.id}, Type: ${conv.type}, Other User ID: ${conv.otherUserId || 'N/A'}, Applied Status Class: ${statusClass}, Is Online: ${isOnlineForDisplay}`);
+        console.log(`Rendering conversation: ${conv.name}, ID: ${conv.id}, Type: ${conv.type}, Other User ID: ${conv.otherUserId || 'N/A'}, Applied Status Class: ${statusClass}, Is Online: ${isOnlineForDisplay}`); // DEBUG
     });
 }
 
@@ -194,10 +179,16 @@ async function checkAuthAndRender() {
         if (data.isAuthenticated) {
             loggedInUsername = data.username;
             currentUsernameSpan.textContent = `مرحباً، ${loggedInUsername}!`;
-            authContainer.classList.add('hidden');
-            chatContainer.classList.remove('hidden');
+
+            console.log("checkAuthAndRender: User is authenticated. Hiding auth, showing chat."); // DEBUG
+            authContainer.classList.add('hidden'); // إخفاء حاوية المصادقة
+            chatContainer.classList.remove('hidden'); // إظهار حاوية التطبيق الرئيسي للدردشة
+
             await getUserConversations(); // تجلب المحادثات وحالات الاتصال الأولية
+            console.log("checkAuthAndRender: getUserConversations completed."); // DEBUG
+
         } else {
+            console.log("checkAuthAndRender: User is NOT authenticated. Showing auth, hiding chat."); // DEBUG
             loggedInUsername = '';
             currentConversationId = null;
             authContainer.classList.remove('hidden');
@@ -208,7 +199,7 @@ async function checkAuthAndRender() {
             usersOnlineStatus.clear(); // مسح حالات الاتصال عند تسجيل الخروج
         }
     } catch (error) {
-        console.error('خطأ في التحقق من المصادقة:', error);
+        console.error('Error in checkAuthAndRender:', error); // DEBUG
         displayMessage(loginMessage, 'حدث خطأ في الشبكة. الرجاء المحاولة لاحقاً.', 'error');
     }
 }
@@ -264,14 +255,21 @@ loginForm.addEventListener('submit', async (e) => {
             displayMessage(loginMessage, text, 'success');
             loginUsernameInput.value = '';
             loginPasswordInput.value = '';
-            await checkAuthAndRender();
+
+            console.log("Login successful. Calling checkAuthAndRender..."); // DEBUG
+            await checkAuthAndRender(); // هذه هي الدالة التي يجب أن تحول الواجهة
+
+            console.log("After checkAuthAndRender. Disconnecting/connecting socket..."); // DEBUG
             socket.disconnect(); // قطع الاتصال القديم
             socket.connect();   // إعادة الاتصال لتهيئة Socket.IO بشكل صحيح مع الجلسة الجديدة
+            console.log("Socket reconnected. Login process finished."); // DEBUG
+
         } else {
             displayMessage(loginMessage, text, 'error');
+            console.error("Login failed:", text); // DEBUG
         }
     } catch (error) {
-        console.error('خطأ في تسجيل الدخول:', error);
+        console.error('Error during login fetch:', error); // DEBUG
         displayMessage(loginMessage, 'حدث خطأ في الشبكة أثناء تسجيل الدخول. الرجاء المحاولة لاحقاً.', 'error');
     }
 });
@@ -338,7 +336,7 @@ showPrivateFormButton.addEventListener('click', () => {
 });
 
 // معالج حدث لنموذج إنشاء مجموعة داخل المودال
-modalCreateGroupChatForm.addEventListener('submit', (e) => {
+modalCreateGroupChatForm.addEventListener('submit', async (e) => { // إضافة async
     e.preventDefault();
     const groupName = modalGroupChatNameInput.value.trim();
     const participants = modalGroupParticipantsInput.value.trim().split(',').map(name => name.trim()).filter(name => name);
@@ -354,7 +352,7 @@ modalCreateGroupChatForm.addEventListener('submit', (e) => {
 });
 
 // معالج حدث لنموذج بدء محادثة فردية داخل المودال
-modalStartPrivateChatForm.addEventListener('submit', (e) => {
+modalStartPrivateChatForm.addEventListener('submit', async (e) => { // إضافة async
     e.preventDefault();
     const otherUsername = modalPrivateChatUsernameInput.value.trim();
     if (!otherUsername) {
@@ -404,7 +402,7 @@ socket.on('conversation history', (data) => {
     }
 });
 
-// تعديل: معالج حدث لاستقبال قائمة المحادثات (لإضافة مؤشر الحالة)
+// معالج حدث لاستقبال قائمة المحادثات
 socket.on('user conversations', (conversations) => {
     renderConversationsList(conversations);
 
@@ -418,29 +416,26 @@ socket.on('user conversations', (conversations) => {
     }
 });
 
-// إضافة: معالج حدث لتحديثات حالة الاتصال الفردية (متصل/غير متصل)
+// معالج حدث لتحديثات حالة الاتصال الفردية (متصل/غير متصل)
 socket.on('user status update', (data) => {
     usersOnlineStatus.set(data.userId, data.isOnline);
     console.log(`User status update received: ${data.username} (ID: ${data.userId}) is ${data.isOnline ? 'online' : 'offline'}.`);
     updateOnlineStatusIndicator(data.userId, data.isOnline);
 });
 
-// إضافة: معالج حدث لاستقبال جميع حالات الاتصال الأولية عند الاتصال
+// معالج حدث لاستقبال جميع حالات الاتصال الأولية عند الاتصال
 socket.on('all online statuses', (statuses) => {
     usersOnlineStatus.clear();
     for (const userId in statuses) {
         usersOnlineStatus.set(parseInt(userId), statuses[userId].isOnline);
     }
     console.log('Received all online statuses:', statuses);
-    // بعد استلام جميع الحالات، أعد عرض قائمة المحادثات لتحديث المؤشرات الصحيحة
-    // (البيانات conv.otherUserId ستكون موجودة بعد 'user conversations')
     socket.emit('get user conversations'); // تطلب قائمة المحادثات مع حالات الاتصال المحدثة
 });
 
-// إضافة: دالة جديدة لتحديث المؤشر المرئي لحالة الاتصال مباشرة
+// دالة لتحديث المؤشر المرئي لحالة الاتصال مباشرة
 function updateOnlineStatusIndicator(userId, isOnline) {
     console.log(`Attempting to update status for userId: ${userId}, to ${isOnline ? 'online' : 'offline'}`);
-    // ابحث عن جميع عناصر المحادثة التي تمثل محادثات فردية مع هذا المستخدم
     const conversationItems = conversationsList.querySelectorAll(`.conversation-item[data-other-user-id="${userId}"]`);
     conversationItems.forEach(item => {
         const statusIndicator = item.querySelector('.status-indicator');
@@ -472,7 +467,7 @@ socket.on('error message', (msg) => {
 });
 
 
-// --- منطق لوحة مفاتيح الرموز التعبيرية (نفس السابق) ---
+// --- منطق لوحة مفاتيح الرموز التعبيرية ---
 
 const emojis = [
     '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
@@ -486,7 +481,6 @@ const emojis = [
     '❤️', '👍', '🙏', '💯', '😂', '😍', '😊', '🎉', '🔥', '🚀'
 ];
 
-// دالة لإنشاء لوحة الرموز التعبيرية وعرضها
 function renderEmojiPicker() {
     emojiPicker.innerHTML = '';
     emojis.forEach(emoji => {
@@ -503,7 +497,6 @@ function renderEmojiPicker() {
     });
 }
 
-// معالج حدث لزر الرموز التعبيرية لتبديل رؤية اللوحة
 emojiButton.addEventListener('click', (event) => {
     event.stopPropagation();
     emojiPicker.classList.toggle('hidden');
@@ -512,7 +505,6 @@ emojiButton.addEventListener('click', (event) => {
     }
 });
 
-// إخفاء لوحة الرموز التعبيرية عند النقر خارجها أو عند إرسال رسالة
 document.addEventListener('click', (event) => {
     if (!emojiButton.contains(event.target) && !emojiPicker.contains(event.target)) {
         emojiPicker.classList.add('hidden');
@@ -520,4 +512,4 @@ document.addEventListener('click', (event) => {
 });
 
 
-document.addEventListener('DOMContentLoaded', checkAuthAndRender); 
+document.addEventListener('DOMContentLoaded', checkAuthAndRender);
