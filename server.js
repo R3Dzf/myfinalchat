@@ -23,17 +23,19 @@ const activeUserSockets = new Map(); // Map<userId, Set<socket.id>>
 // Added: To store online status of users
 const userOnlineStatus = new Map(); // Map<userId, { username: string, isOnline: boolean }>
 
+// استخدام متغير البيئة PORT إذا كان متاحاً (مثل في Railway/Render) أو 3000 للتطوير المحلي
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
 // --- PostgreSQL Database Connection Setup ---
 const pool = new Pool({
-    user: 'postgres', // Make sure to update this
-    host: 'localhost',
-    database: 'chat_app_db', // Make sure to update this
-    password: '1234', // Make sure to update this
-    port: 5432,
+    // استخدام process.env.DATABASE_URL الذي توفره منصات النشر (مثل Railway/Render)
+    // إذا لم يكن متاحًا، نستخدم سلسلة الاتصال المحلية كاحتياطي للتطوير
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:1234@localhost:5432/chat_app_db',
+    // لبيئة الإنتاج (Heroku, Render, Railway) غالبًا ما تحتاج إلى SSL
+    // Railway و Render يتطلبان { rejectUnauthorized: false } لـ SSL
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 pool.connect()
@@ -49,18 +51,22 @@ const sessionMiddleware = session({
         pool: pool,
         tableName: 'session'
     }),
-    secret: 'your_super_secret_key_for_session_!!!_change_this_long_and_random', // Must be a long and random string
-    resave: false,
-    saveUninitialized: false,
+    // استخدام متغير البيئة SESSION_SECRET للسرية في بيئة الإنتاج
+    // توفير قيمة احتياطية قوية للتطوير المحلي إذا لم يتم تعيين المتغير
+    secret: process.env.SESSION_SECRET || 'fallback_super_secret_for_development_only_!!!', // يجب أن تكون سلسلة طويلة وعشوائية
+    resave: false, // لا تحفظ الجلسة إذا لم تتغير
+    saveUninitialized: false, // لا تحفظ الجلسات الجديدة التي لم يتم تهيئتها
     cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        secure: process.env.NODE_ENV === 'production', // Use 'true' in production for HTTPS
-        httpOnly: true // Prevents cookie access from client-side JavaScript
+        maxAge: 30 * 24 * 60 * 60 * 1000, // صلاحية الكوكي لمدة 30 يوم (بالمللي ثانية)
+        // استخدام 'true' فقط في بيئة الإنتاج (HTTPS)
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true // يمنع الوصول إلى الكوكي من JavaScript في المتصفح
     }
 });
 app.use(sessionMiddleware);
 
 // --- Socket.IO Session Integration ---
+// ربط Socket.IO بنفس middleware الجلسة للسماح بالوصول إلى بيانات الجلسة (req.session)
 io.engine.use(sessionMiddleware);
 
 // Serve static files from the 'public' directory
@@ -81,7 +87,7 @@ app.post('/register', async (req, res) => {
         );
         res.status(201).send('User registered successfully! You can now log in.');
     } catch (error) {
-        if (error.code === '23505') {
+        if (error.code === '23505') { // PostgreSQL error code for unique_violation
             console.error(`Attempt to register existing username: ${username}`);
             res.status(400).send('Username already exists. Please choose another.');
         } else {
@@ -111,7 +117,7 @@ app.post('/login', async (req, res) => {
 
         req.session.userId = user.id;
         req.session.username = user.username;
-        req.session.save();
+        req.session.save(); // Ensure session is saved after modification
 
         res.status(200).send('Logged in successfully!');
 
@@ -136,13 +142,14 @@ app.post('/logout', (req, res) => {
             console.error('Error during logout:', err);
             return res.status(500).send('Failed to log out.');
         }
-        res.clearCookie('connect.sid');
+        res.clearCookie('connect.sid'); // Clear the session cookie from the browser
         console.log('Session destroyed and cookie cleared.');
         res.status(200).send('Logged out successfully!');
     });
 });
 
 app.get('/chat-history', async (req, res) => {
+    // This route is for general chat history (might not be used with specific conversations)
     if (!req.session.userId) {
         return res.status(401).send('Unauthorized to access chat history.');
     }
@@ -168,9 +175,10 @@ io.on('connection', async (socket) => {
     const userId = socket.request.session.userId;
     const username = socket.request.session.username;
 
+    // Disconnect unauthenticated connections immediately
     if (!userId || !username) {
         console.log(`🚫 Unauthenticated Socket.IO connection attempt: ${socket.id}`);
-        socket.disconnect(true); // Disconnect if user is not authenticated
+        socket.disconnect(true);
         return;
     }
 
@@ -182,15 +190,15 @@ io.on('connection', async (socket) => {
     }
     activeUserSockets.get(userId).add(socket.id);
 
-    // Update user's online status
+    // Update user's online status and notify all
     userOnlineStatus.set(userId, { username, isOnline: true });
-    // Notify all connected clients about this user's online status
-    io.emit('user status update', { userId, username, isOnline: true });
+    io.emit('user status update', { userId, username, isOnline: true }); // Notify all clients
     console.log(`User ${username} is now online. Total active sockets for user: ${activeUserSockets.get(userId).size}`);
 
 
     socket.join(userId.toString()); // Each user joins a room named after their ID
 
+    // Handle sending messages within a specific conversation
     socket.on('send message', async (data) => {
         const { conversationId, messageText } = data;
 
@@ -201,6 +209,7 @@ io.on('connection', async (socket) => {
         }
 
         try {
+            // Verify if the user is a participant of this conversation
             const participantCheck = await pool.query(
                 'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
                 [conversationId, userId]
@@ -212,12 +221,14 @@ io.on('connection', async (socket) => {
                 return;
             }
 
+            // Save the message to the database
             await pool.query(
                 'INSERT INTO messages (conversation_id, user_id, username, message_text) VALUES ($1, $2, $3, $4)',
                 [conversationId, userId, username, messageText]
             );
             console.log(`New message in conversation ${conversationId} from ${username}: "${messageText}"`);
 
+            // Emit the message to all participants in that conversation's room
             io.to(conversationId.toString()).emit('receive message', {
                 conversationId: conversationId,
                 username: username,
@@ -232,8 +243,10 @@ io.on('connection', async (socket) => {
     });
 
 
+    // Handle user joining a specific conversation room
     socket.on('join conversation', async (conversationId) => {
         try {
+            // Verify if the user is a participant of this conversation
             const participantCheck = await pool.query(
                 'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
                 [conversationId, userId]
@@ -247,16 +260,16 @@ io.on('connection', async (socket) => {
 
             // Leave any previously joined conversation room (important for switching chats)
             socket.rooms.forEach(room => {
-                if (room !== socket.id.toString() && room !== userId.toString()) {
+                if (room !== socket.id.toString() && room !== userId.toString()) { // Don't leave personal room or socket ID room
                     socket.leave(room);
                     console.log(`${username} left room: ${room}`);
                 }
             });
 
-
-            socket.join(conversationId.toString());
+            socket.join(conversationId.toString()); // Join the specific conversation room
             console.log(`${username} (ID: ${userId}) joined conversation: ${conversationId}`);
 
+            // Fetch and emit conversation history for this specific conversation
             const result = await pool.query(
                 'SELECT username, message_text, timestamp FROM messages WHERE conversation_id = $1 ORDER BY timestamp ASC',
                 [conversationId]
@@ -276,6 +289,7 @@ io.on('connection', async (socket) => {
     });
 
 
+    // Handle creating a new group conversation
     socket.on('create group conversation', async ({ name, participantUsernames }) => {
         if (!name || !participantUsernames || !Array.isArray(participantUsernames) || participantUsernames.length === 0) {
             socket.emit('error message', 'Invalid data for creating a group conversation.');
@@ -283,23 +297,26 @@ io.on('connection', async (socket) => {
         }
 
         try {
+            // Fetch user IDs for all participants
             const userIdsResult = await pool.query(
                 'SELECT id, username FROM users WHERE username = ANY($1::varchar[])',
-                [participantUsernames.concat(username)]
+                [participantUsernames.concat(username)] // Include current user
             );
             const foundUsers = userIdsResult.rows;
 
-            if (foundUsers.length !== participantUsernames.length + 1) {
+            if (foundUsers.length !== participantUsernames.length + 1) { // +1 for the current user
                 socket.emit('error message', 'Some specified users do not exist.');
                 return;
             }
 
+            // 1. Create the conversation entry in the 'conversations' table
             const newConvResult = await pool.query(
                 "INSERT INTO conversations (type, name) VALUES ('group', $1) RETURNING id",
                 [name]
             );
             const newConversationId = newConvResult.rows[0].id;
 
+            // 2. Add participants to the 'conversation_participants' table
             const participantValues = foundUsers.map(u => `(${newConversationId}, ${u.id})`).join(',');
             await pool.query(
                 `INSERT INTO conversation_participants (conversation_id, user_id) VALUES ${participantValues}`
@@ -307,8 +324,9 @@ io.on('connection', async (socket) => {
 
             console.log(`New group conversation created: "${name}" (ID: ${newConversationId}) with participants: ${foundUsers.map(u => u.username).join(', ')}`);
 
+            // Notify all participants about the new conversation
             foundUsers.forEach(user => {
-                if (activeUserSockets.has(user.id)) {
+                if (activeUserSockets.has(user.id)) { // Only send to currently active/authenticated sockets
                     activeUserSockets.get(user.id).forEach(socketId => {
                         io.to(socketId).emit('new conversation available', {
                             id: newConversationId,
@@ -322,7 +340,7 @@ io.on('connection', async (socket) => {
                 }
             });
 
-            socket.emit('conversation created', {
+            socket.emit('conversation created', { // Confirm creation to the initiator
                 id: newConversationId,
                 type: 'group',
                 name: name
@@ -335,12 +353,14 @@ io.on('connection', async (socket) => {
     });
 
 
+    // Handle starting a private conversation
     socket.on('start private conversation', async (otherUsername) => {
         if (!otherUsername || otherUsername === username) {
             socket.emit('error message', 'Invalid username for starting private conversation.');
             return;
         }
         try {
+            // Fetch the ID of the other user
             const otherUserResult = await pool.query('SELECT id FROM users WHERE username = $1', [otherUsername]);
             const otherUser = otherUserResult.rows[0];
 
@@ -350,13 +370,14 @@ io.on('connection', async (socket) => {
             }
             const otherUserId = otherUser.id;
 
+            // Check for an existing private conversation between these two users
             const existingConvResult = await pool.query(
                 `SELECT c.id FROM conversations c
                  JOIN conversation_participants cp1 ON c.id = cp1.conversation_id
                  JOIN conversation_participants cp2 ON c.id = cp2.conversation_id
                  WHERE c.type = 'private'
                  AND cp1.user_id = $1 AND cp2.user_id = $2
-                 AND cp1.user_id <> cp2.user_id`,
+                 AND cp1.user_id <> cp2.user_id`, // Ensure it's between two different users
                 [userId, otherUserId]
             );
 
@@ -365,24 +386,27 @@ io.on('connection', async (socket) => {
                 conversationId = existingConvResult.rows[0].id;
                 console.log(`Private conversation exists between ${username} and ${otherUsername}: ${conversationId}`);
             } else {
+                // If no existing conversation, create a new private conversation
                 const newConvResult = await pool.query(
                     "INSERT INTO conversations (type) VALUES ('private') RETURNING id",
                     []
                 );
                 conversationId = newConvResult.rows[0].id;
 
+                // Add both participants to the conversation
                 await pool.query(
                     'INSERT INTO conversation_participants (conversation_id, user_id) VALUES ($1, $2), ($3, $4)',
                     [conversationId, userId, conversationId, otherUserId]
                 );
                 console.log(`New private conversation created: ${conversationId} between ${username} and ${otherUsername}`);
 
+                // Notify the other user about the new private conversation
                 if (activeUserSockets.has(otherUserId)) {
                     activeUserSockets.get(otherUserId).forEach(socketId => {
                         io.to(socketId).emit('new conversation available', {
                             id: conversationId,
                             type: 'private',
-                            name: username // Initiating user's username
+                            name: username // The username of the initiating user
                         });
                     });
                     console.log(`New private conversation notification sent to ${otherUsername} (ID: ${otherUserId}).`);
@@ -394,7 +418,7 @@ io.on('connection', async (socket) => {
             socket.emit('private conversation started', {
                 id: conversationId,
                 type: 'private',
-                name: otherUsername
+                name: otherUsername // The username of the other participant
             });
 
         } catch (error) {
@@ -403,9 +427,10 @@ io.on('connection', async (socket) => {
         }
     });
 
+    // Handle fetching conversations for the current user
     socket.on('get user conversations', async () => {
         try {
-            // Added: Include online status in the list of conversations
+            // Retrieve conversations the user is a part of
             const result = await pool.query(
                 `SELECT c.id, c.type, c.name
                  FROM conversations c
@@ -415,6 +440,7 @@ io.on('connection', async (socket) => {
                 [userId]
             );
 
+            // For private conversations, fetch the other participant's username and online status
             const conversations = await Promise.all(result.rows.map(async (conv) => {
                 if (conv.type === 'private') {
                     const otherParticipantResult = await pool.query(
@@ -438,8 +464,7 @@ io.on('connection', async (socket) => {
                         otherUserId: otherUserId // Added for client-side tracking
                     };
                 }
-                // For group chats, we might determine group member status later if needed.
-                // For now, group chat online status will be false or undefined.
+                // For group chats, online status is set to false by default for now
                 return {
                     id: conv.id,
                     type: conv.type,
@@ -449,7 +474,7 @@ io.on('connection', async (socket) => {
                 };
             }));
 
-            socket.emit('user conversations', conversations);
+            socket.emit('user conversations', conversations); // Emit the list of conversations to the client
             console.log(`${username} fetched ${conversations.length} conversation(s).`);
 
         } catch (error) {
@@ -458,7 +483,7 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // Added: Event for clients to request current online status of all users
+    // Event for clients to request current online status of all users
     socket.on('request all online statuses', () => {
         const statuses = {};
         userOnlineStatus.forEach((status, uid) => {
@@ -477,7 +502,7 @@ io.on('connection', async (socket) => {
             if (activeUserSockets.get(userId).size === 0) {
                 // If no active sockets left for this user, mark as offline
                 userOnlineStatus.set(userId, { username, isOnline: false });
-                io.emit('user status update', { userId, username, isOnline: false });
+                io.emit('user status update', { userId, username, isOnline: false }); // Notify all clients
                 console.log(`User ${username} is now offline.`);
                 activeUserSockets.delete(userId); // Remove user from active sockets map
             }
