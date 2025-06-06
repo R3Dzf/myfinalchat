@@ -1,0 +1,879 @@
+/* chat-app/public/style.css */
+
+/* --- الخطوط الأساسية وإعدادات الجسم --- */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    background-color: #e9ebee;
+    /* خلفية فاتحة وناعمة */
+    color: #333333;
+    /* لون نص داكن لقابلية قراءة أفضل */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    /* لجعل الجسم يملأ كامل ارتفاع الشاشة */
+    direction: rtl;
+    /* لضمان دعم RTL للغة العربية بشكل افتراضي للصفحة */
+}
+
+/* --- الفئات المساعدة --- */
+.hidden {
+    display: none !important;
+    /* لإخفاء العناصر بشكل قسري */
+}
+
+.message {
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
+    font-size: 0.9em;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.message.success {
+    color: #28a745;
+    /* أخضر للنجاح */
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    color: #dc3545;
+    /* أحمر للخطأ */
+    background-color: #f8d7da;
+    border: 1px solid #f5c6fb;
+}
+
+.separator {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.separator::before,
+.separator::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background-color: #ddd;
+}
+
+.separator::before {
+    right: 0;
+}
+
+.separator::after {
+    left: 0;
+}
+
+/* --- تنسيقات حاوية المصادقة (نفس السابق) --- */
+.auth-container {
+    width: 100%;
+    max-width: 450px;
+    padding: 20px;
+}
+
+.auth-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    text-align: center;
+}
+
+.auth-title {
+    color: #007bff;
+    margin-bottom: 30px;
+    font-size: 2em;
+    font-weight: bold;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-title {
+    color: #555;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.input-group {
+    position: relative;
+    width: 100%;
+}
+
+.input-group .icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 1.1em;
+}
+
+.auth-form input {
+    padding: 12px 45px 12px 15px;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    font-size: 1em;
+    width: calc(100% - 60px);
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    direction: rtl;
+    text-align: right;
+}
+
+.auth-form input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.auth-button {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 100%;
+}
+
+.register-button {
+    background-color: #28a745;
+    color: white;
+}
+
+.register-button:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}
+
+.login-button {
+    background-color: #007bff;
+    color: white;
+}
+
+.login-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+/* --- تنسيقات التطبيق الرئيسي للدردشة (نفس السابق) --- */
+.main-app-container {
+    display: flex;
+    width: 95%;
+    max-width: 1400px;
+    height: 90vh;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+/* القائمة الجانبية (Sidebar) */
+.sidebar {
+    width: 320px;
+    background-color: #f8f9fa;
+    border-right: 1px solid #eeeeee;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: inset -2px 0 5px rgba(0, 0, 0, 0.02);
+    position: relative;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+    font-size: 1.1em;
+}
+
+#current-username-sidebar {
+    font-weight: bold;
+    color: #007bff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#current-username-sidebar .fas {
+    color: #007bff;
+}
+
+
+.logout-button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.logout-button:hover {
+    background-color: #c82333;
+    transform: translateY(-1px);
+}
+
+/* --- شريط البحث الجديد --- */
+.search-bar-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.search-bar-container .search-icon {
+    position: absolute;
+    left: 15px;
+    /* الأيقونة على اليسار */
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+#search-conversations-input {
+    width: calc(100% - 30px);
+    /* يضبط العرض مع البادينغ */
+    padding: 10px 15px 10px 40px;
+    /* مسافة للأيقونة */
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    /* حواف مستديرة جداً */
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    direction: rtl;
+    /* الكتابة من اليمين لليسار */
+    text-align: right;
+    /* محاذاة النص لليمين */
+}
+
+#search-conversations-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+}
+
+.conversations-list-title {
+    font-size: 1.2em;
+    color: #333;
+    margin-top: 15px;
+    /* تعديل الهامش بعد شريط البحث */
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.conversations-list-title .fas {
+    color: #007bff;
+}
+
+.conversations-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+    overflow-y: auto;
+    /* تمكين التمرير للقائمة */
+    padding-bottom: 70px;
+    /* لتوفير مساحة للزر العائم في الأسفل */
+
+    /* --- بداية التعديلات لإخفاء شريط التمرير --- */
+    /* إخفاء شريط التمرير في متصفحات WebKit (Chrome, Safari, Edge) */
+    &::-webkit-scrollbar {
+        width: 0;
+        /* إزالة العرض */
+        background: transparent;
+        /* جعل الخلفية شفافة */
+    }
+
+    /* إخفاء شريط التمرير في Firefox */
+    scrollbar-width: none;
+    /* إزالة العرض الافتراضي */
+    /* --- نهاية التعديلات لإخفاء شريط التمرير --- */
+}
+
+/* --- زر الإنشاء العائم (FAB - Floating Action Button) --- */
+.fab {
+    position: absolute;
+    /* ليطفو فوق المحتوى */
+    bottom: 20px;
+    /* مسافة من الأسفل */
+    right: 20px;
+    /* مسافة من اليمين */
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    /* لجعلها دائرية */
+    background-color: #007bff;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    font-size: 1.5em;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    z-index: 10;
+    /* لضمان ظهوره فوق المحتوى الآخر */
+}
+
+.fab:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+.fab .fas {
+    margin: 0;
+    /* إزالة أي هوامش داخلية للأيقونة */
+}
+
+
+/* --- تنسيقات عنصر المحادثة في القائمة --- */
+.conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid #eceeef;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 1em;
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    direction: rtl;
+    /* اتجاه النص من اليمين لليسار */
+    text-align: right;
+    justify-content: space-between;
+    /* لدفع مؤشر الحالة إلى اليسار */
+}
+
+.conversation-item:last-child {
+    border-bottom: none;
+}
+
+.conversation-item:hover {
+    background-color: #e2e6ea;
+}
+
+.conversation-item.active {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+    border-radius: 8px;
+    margin: 0 -15px;
+    padding: 15px 30px;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.conversation-item.active:hover {
+    background-color: #007bff;
+}
+
+/* إضافة: تنسيق لمؤشر الحالة (النقطة) */
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 10px;
+    /* مسافة عن اسم المحادثة */
+    flex-shrink: 0;
+    /* لمنع المؤشر من الانكماش */
+    display: inline-block;
+    /* لضمان أنها تأخذ مساحة وتُعرض */
+    vertical-align: middle;
+
+    /* لمحاذاة المؤشر عمودياً مع النص */
+}
+
+.status-indicator.online {
+    background-color: #28a745;
+    /* أخضر للمتصل */
+}
+
+.status-indicator.offline {
+    background-color: #6c757d;
+    /* رمادي لغير المتصل */
+}
+
+
+/* منطقة الدردشة الرئيسية */
+.chat-area-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 25px;
+    position: relative;
+}
+
+.chat-header-area {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+#chat-area-header {
+    margin: 0;
+    font-size: 1.8em;
+    color: #333;
+    font-weight: 600;
+    /* لضمان اتجاه النص من اليمين لليسار */
+    direction: rtl;
+    text-align: right;
+}
+
+.messages-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 15px;
+    background-color: #fdfdfd;
+    display: flex;
+    flex-direction: column;
+}
+
+/* التنسيق الأساسي لفقاعة الرسالة */
+.messages-list>li {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    line-height: 1.5;
+    font-size: 0.95em;
+    border-radius: 15px;
+    max-width: 85%;
+    word-wrap: break-word;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    /* اتجاه المحتوى داخل الفقاعة نفسها */
+    direction: rtl;
+    /* كل نص داخل الفقاعة سيبدأ من اليمين لليسار */
+    text-align: right;
+    /* محاذاة النص داخل الفقاعة لليمين */
+}
+
+/* تنسيق بيانات الرسالة (اسم المستخدم والوقت) */
+.messages-list>li .message-meta {
+    font-size: 0.8em;
+    color: #666;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    direction: rtl;
+    /* اجعل هذا RTL لضمان أن النص يتبع هذا الاتجاه */
+    justify-content: flex-start;
+    /* ليكون الاسم والوقت في بداية الفقاعة */
+}
+
+/* اسم المستخدم داخل الرسالة */
+.messages-list>li strong {
+    color: #007bff;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+/* ختم الوقت داخل الرسالة */
+.messages-list>li .timestamp {
+    font-size: 0.9em;
+    color: #999;
+}
+
+/* محتوى الرسالة نفسه (النص الفعلي) */
+.messages-list>li .message-content {
+    font-size: 1em;
+    color: #333;
+    direction: rtl;
+    /* محتوى الرسالة يبقى RTL */
+    text-align: right;
+}
+
+
+/* --- رسائل المستخدم الحالي (على اليمين) --- */
+.messages-list>li.my-message {
+    background-color: #dcf8c6;
+    /* لون أخضر فاتح لرسائل المرسل */
+    align-self: flex-end;
+    /* يدفع الفقاعة إلى اليمين */
+    margin-left: auto;
+    /* يدفع الفقاعة إلى اليمين في تخطيط RTL */
+    margin-right: 0;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 2px;
+    /* زاوية حادة قليلاً لتمييزها */
+}
+
+.messages-list>li.my-message .message-meta {
+    justify-content: flex-end;
+    /* اجعل الميتا تبدأ من اليسار (داخل الفقاعة) لرسائل المستخدم */
+    direction: ltr;
+    /* اتجاه LTR للميتا لرسائل المستخدم */
+    text-align: left;
+    /* محاذاة لليسار */
+}
+
+.messages-list>li.my-message .message-content {
+    direction: rtl;
+    /* محتوى الرسالة يبقى RTL */
+    text-align: right;
+}
+
+/* --- رسائل المستخدمين الآخرين (على اليسار) --- */
+.messages-list>li.other-message {
+    background-color: #f0f2f5;
+    /* خلفية رمادية فاتحة لرسائل المستقبل */
+    align-self: flex-start;
+    /* يدفع الفقاعة إلى اليسار */
+    margin-right: auto;
+    /* يدفع الفقاعة إلى اليسار في تخطيط RTL */
+    margin-left: 0;
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 15px;
+}
+
+.messages-list>li.other-message .message-meta {
+    justify-content: flex-start;
+    /* اجعل الميتا تبدأ من اليمين (داخل الفقاعة) لرسائل الآخرين */
+    direction: rtl;
+    /* اتجاه RTL للميتا لرسائل الآخرين */
+    text-align: right;
+    /* محاذاة لليمين */
+}
+
+.messages-list>li.other-message .message-content {
+    direction: rtl;
+    /* محتوى الرسالة يبقى RTL */
+    text-align: right;
+}
+
+
+.message-input-area {
+    /* حاوية جديدة لشريط الإدخال والرموز التعبيرية */
+    width: 100%;
+    position: relative;
+    /* لجعل لوحة الرموز التعبيرية تظهر فوقها */
+    margin-top: auto;
+    /* يدفع الحاوية إلى الأسفل */
+}
+
+.message-input-form {
+    background: #ffffff;
+    padding: 10px 15px;
+    display: flex;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    align-items: center;
+    /* لمحاذاة العناصر عمودياً */
+}
+
+.message-input-form input {
+    border: 1px solid #ddd;
+    padding: 12px 15px;
+    flex-grow: 1;
+    border-radius: 25px;
+    margin: 0 10px;
+    /* مسافة من الجانبين */
+    font-size: 1em;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    direction: rtl;
+    text-align: right;
+    /* تأكد أن هذا موجود للكتابة */
+}
+
+.message-input-form input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.send-button,
+.emoji-button {
+    background: #007bff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 25px;
+    outline: none;
+    color: #fff;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* لتوسيط الأيقونة */
+    gap: 8px;
+    white-space: nowrap;
+    /* لمنع الكسر إذا كان هناك نص وأيقونة */
+}
+
+.send-button:hover,
+.emoji-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+.emoji-button {
+    background-color: #6c757d;
+    /* لون مختلف لزر الرموز التعبيرية */
+    padding: 12px 15px;
+    /* أصغر قليلاً من زر الإرسال */
+    margin-right: 10px;
+    /* مسافة بين زر الرموز التعبيرية وحقل الإدخال */
+}
+
+.emoji-button:hover {
+    background-color: #5a6268;
+}
+
+/* لوحة مفاتيح الرموز التعبيرية */
+.emoji-picker {
+    position: absolute;
+    bottom: 100%;
+    /* تظهر فوق شريط الإدخال */
+    right: 0;
+    /* محاذاة لليمين */
+    width: 100%;
+    max-height: 250px;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    display: grid;
+    /* لترتيب الرموز في شبكة */
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    /* 40px حجم الرمز */
+    gap: 5px;
+    z-index: 100;
+    /* للتأكد من أنها تظهر فوق العناصر الأخرى */
+}
+
+.emoji-picker span {
+    font-size: 2em;
+    /* حجم الرمز التعبيري */
+    text-align: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+}
+
+.emoji-picker span:hover {
+    background-color: #f0f2f5;
+}
+
+/* --- النافذة المنبثقة (Modal) والتنسيقات الخاصة بها --- */
+.modal {
+    position: fixed;
+    /* لتغطية الشاشة بأكملها */
+    z-index: 1000;
+    /* ليكون في المقدمة جداً */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    /* لتمكين التمرير إذا كان المحتوى كبيراً */
+    background-color: rgba(0, 0, 0, 0.6);
+    /* خلفية شبه شفافة */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    /* لتوسيطها */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 80%;
+    max-width: 500px;
+    position: relative;
+    text-align: center;
+    animation: fadeIn 0.3s ease-out;
+    /* تأثير ظهور ناعم */
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.close-button {
+    color: #aaa;
+    float: left;
+    /* ليكون على اليسار في RTL */
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #333;
+    text-decoration: none;
+}
+
+.modal-title {
+    font-size: 1.8em;
+    color: #007bff;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.modal-title .fas {
+    color: #007bff;
+}
+
+.modal-options {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-option-button {
+    flex: 1;
+    /* لتوزيع المساحة بالتساوي */
+    padding: 15px 20px;
+    background-color: #6c757d;
+    /* رمادي لأزرار الخيار */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 600;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.modal-option-button:hover {
+    background-color: #5a6268;
+    transform: translateY(-2px);
+}
+
+/* public/style.css */
+
+/* ... (الكود السابق) ... */
+
+.form-section {
+    margin-top: 20px;
+    /* إزالة border-top مباشرة من هنا لمنع الخط المزدوج */
+    padding-top: 20px;
+    /* يمكن إضافة border-top فقط لأول form-section إذا لزم الأمر لاحقاً */
+    /* أو استخدام طريقة أخرى لفصل الأقسام */
+}
+
+/* إضافة: لتطبيق خط فاصل واحد فقط بين خيارات المودال والنماذج */
+
+
+.form-section h3 {
+    font-size: 1.3em;
+    color: #333;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.form-section h3 .fas {
+    color: #007bff;
+}
+
+/* استخدام نفس تنسيقات .conversation-form الأصلية ولكن داخل المودال */
+#modal-create-group-chat-form,
+#modal-start-private-chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#modal-create-group-chat-form input,
+#modal-start-private-chat-form input {
+    padding: 12px 15px;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    font-size: 1em;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    direction: rtl;
+    /* الكتابة من اليمين لليسار */
+    text-align: right;
+    /* محاذاة النص لليمين */
+}
+
+#modal-create-group-chat-form input:focus,
+#modal-start-private-chat-form input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+}
+
+#modal-create-group-chat-form .create-button,
+#modal-start-private-chat-form .create-button {
+    padding: 12px 25px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+#modal-create-group-chat-form .create-button:hover,
+#modal-start-private-chat-form .create-button:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}

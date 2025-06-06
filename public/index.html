@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق الدردشة الاحترافي</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body>
+    <div class="auth-container" id="auth-container">
+        <div class="auth-card">
+            <h2 class="auth-title">أهلاً بك في تطبيق الدردشة</h2>
+
+            <form id="register-form" class="auth-form">
+                <h3 class="form-title">إنشاء حساب جديد</h3>
+                <div class="input-group">
+                    <i class="fas fa-user icon"></i>
+                    <input type="text" id="register-username" placeholder="اسم المستخدم" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock icon"></i>
+                    <input type="password" id="register-password" placeholder="كلمة المرور" required>
+                </div>
+                <button type="submit" class="auth-button register-button">تسجيل</button>
+                <p id="register-message" class="message"></p>
+            </form>
+
+            <div class="separator">أو</div>
+
+            <form id="login-form" class="auth-form">
+                <h3 class="form-title">تسجيل الدخول</h3>
+                <div class="input-group">
+                    <i class="fas fa-user icon"></i>
+                    <input type="text" id="login-username" placeholder="اسم المستخدم" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock icon"></i>
+                    <input type="password" id="login-password" placeholder="كلمة المرور" required>
+                </div>
+                <button type="submit" class="auth-button login-button">دخول</button>
+                <p id="login-message" class="message"></p>
+            </form>
+        </div>
+    </div>
+
+    <div class="main-app-container hidden" id="chat-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span id="current-username-sidebar"><i class="fas fa-circle-user"></i> مرحباً،
+                    <strong>مستخدم</strong></span>
+                <button id="logout-button" class="logout-button"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+
+            <div class="search-bar-container"> <i class="fas fa-search search-icon"></i>
+                <input type="text" id="search-conversations-input" placeholder="البحث في المحادثات...">
+            </div>
+
+            <h3 class="conversations-list-title"><i class="fas fa-comment-dots"></i> محادثاتي</h3>
+            <ul id="conversations-list" class="conversations-list">
+            </ul>
+
+            <button id="new-conversation-fab" class="fab"><i class="fas fa-plus"></i></button>
+        </div>
+
+        <div class="chat-area-container hidden" id="chat-area-container">
+            <div class="chat-header-area">
+                <h1 id="chat-area-header">الرجاء اختيار محادثة</h1>
+            </div>
+            <ul id="messages" class="messages-list"></ul>
+            <div class="message-input-area">
+                <form id="form" class="message-input-form">
+                    <button type="button" id="emoji-button" class="emoji-button"><i class="fas fa-smile"></i></button>
+                    <input id="input" autocomplete="off" placeholder="اكتب رسالتك هنا..." />
+                    <button class="send-button"><i class="fas fa-paper-plane"></i> إرسال</button>
+                </form>
+                <div id="emoji-picker" class="emoji-picker hidden">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="new-conversation-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-button" id="close-modal-button">&times;</span>
+            <h2 class="modal-title"><i class="fas fa-plus-circle"></i> إنشاء محادثة جديدة</h2>
+
+            <div class="modal-options">
+                <button id="show-group-form-button" class="modal-option-button"><i class="fas fa-users"></i> إنشاء
+                    مجموعة</button>
+                <button id="show-private-form-button" class="modal-option-button"><i class="fas fa-user-plus"></i>
+                    محادثة فردية</button>
+            </div>
+
+            <div id="group-form-container" class="form-section hidden">
+                <h3><i class="fas fa-users-rays"></i> تفاصيل المجموعة</h3>
+                <form id="modal-create-group-chat-form" class="conversation-form">
+                    <input type="text" id="modal-group-chat-name" placeholder="اسم المجموعة" required>
+                    <input type="text" id="modal-group-participants" placeholder="أسماء المشاركين (فاصلة)">
+                    <button type="submit" class="create-button"><i class="fas fa-plus"></i> إنشاء المجموعة</button>
+                </form>
+            </div>
+
+            <div id="private-form-container" class="form-section hidden">
+                <h3><i class="fas fa-user-plus"></i> محادثة فردية جديدة</h3>
+                <form id="modal-start-private-chat-form" class="conversation-form">
+                    <input type="text" id="modal-private-chat-username" placeholder="اسم المستخدم للدردشة" required>
+                    <button type="submit" class="create-button"><i class="fas fa-comment"></i> بدء المحادثة</button>
+                </form>
+            </div>
+            <p id="modal-message" class="message"></p>
+        </div>
+    </div>
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+
+</html>
