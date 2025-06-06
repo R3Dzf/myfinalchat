@@ -13,7 +13,13 @@ const server = http.createServer(app);
 
 // تهيئة Socket.IO: io هو الكائن الذي يمثل Socket.IO على الخادم
 const io = new socketIo.Server(server, {
-    cookie: true // Enable Socket.IO to read cookies (for session)
+    cookie: true, // Enable Socket.IO to read cookies (for session)
+    path: '/socket.io/', // إضافة: تحديد المسار الخاص بـ Socket.IO بشكل صريح
+    cors: { // إضافة: السماح بالوصول من أي مصدر في بيئة التطوير
+        origin: "*", // هذا يسمح بالاتصالات من أي مكان. في الإنتاج، يجب تقييد هذا.
+        methods: ["GET", "POST"],
+        credentials: true
+    }
 });
 
 // To track active sockets for each user
@@ -49,16 +55,14 @@ const sessionMiddleware = session({
         pool: pool,
         tableName: 'session'
     }),
-    // استخدام متغير البيئة SESSION_SECRET للسرية في بيئة الإنتاج
-    // توفير قيمة احتياطية قوية للتطوير المحلي إذا لم يتم تعيين المتغير
-    secret: process.env.SESSION_SECRET || 'fallback_super_secret_for_development_only_!!!', // يجب أن تكون سلسلة طويلة وعشوائية
-    resave: false, // لا تحفظ الجلسة إذا لم تتغير
-    saveUninitialized: false, // لا تحفظ الجلسات الجديدة التي لم يتم تهيئتها
+    secret: process.env.SESSION_SECRET || 'fallback_super_secret_for_development_only_!!!',
+    resave: false,
+    saveUninitialized: false,
     cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // صلاحية الكوكي لمدة 30 يوم (بالمللي ثانية)
-        // استخدام 'true' فقط في بيئة الإنتاج (HTTPS)
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        // تأكد من أن secure هو true فقط في الإنتاج
         secure: process.env.NODE_ENV === 'production',
-        httpOnly: true // يمنع الوصول إلى الكوكي من JavaScript في المتصفح
+        httpOnly: true
     }
 });
 app.use(sessionMiddleware);
