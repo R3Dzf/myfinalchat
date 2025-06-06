@@ -278,6 +278,7 @@ loginForm.addEventListener('submit', async (e) => {
     }
 });
 
+
 logoutButton.addEventListener('click', async () => {
     try {
         const response = await fetch('/logout', { method: 'POST' });
