@@ -256,10 +256,17 @@ loginForm.addEventListener('submit', async (e) => {
             loginUsernameInput.value = '';
             loginPasswordInput.value = '';
 
-            console.log("Login successful. Reloading page for full initialization..."); // DEBUG
-            // --- التغيير هنا: إعادة تحميل الصفحة بالكامل بدلاً من socket.disconnect/connect ---
-            window.location.reload(); // هذا يضمن إعادة تهيئة كل شيء بشكل نظيف
-            // --- نهاية التغيير ---
+            console.log("Login successful. Calling checkAuthAndRender..."); // DEBUG
+            // **هنا نقوم بتغيير التنفيذ:**
+            // نستخدم setTimeout لضمان أن Socket.IO يعيد الاتصال بعد فترة قصيرة
+            // للسماح للجلسة بالاستقرار.
+            setTimeout(async () => {
+                await checkAuthAndRender(); // هذه هي الدالة التي يجب أن تحول الواجهة
+                console.log("After checkAuthAndRender. Disconnecting/connecting socket..."); // DEBUG
+                socket.disconnect(); // قطع الاتصال القديم
+                socket.connect();   // إعادة الاتصال لتهيئة Socket.IO بشكل صحيح مع الجلسة الجديدة
+                console.log("Socket reconnected. Login process finished."); // DEBUG
+            }, 100); // تأخير 100 مللي ثانية (يمكن زيادتها إذا لزم الأمر)
 
         } else {
             displayMessage(loginMessage, text, 'error');
