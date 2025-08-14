@@ -877,3 +877,115 @@ body {
     background-color: #218838;
     transform: translateY(-2px);
 }
+
+
+
+/* Styling for the modal that contains the reaction picker */
+.reaction-picker-modal {
+    position: fixed;
+    /* Ensures it floats over other content */
+    z-index: 2000;
+    /* High z-index to be on top */
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: translate(-50%, -100%);
+    /* Positions it above the mouse cursor */
+    pointer-events: none;
+    /* Allows clicks to pass through when hidden */
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Make the picker visible when the 'visible' class is added */
+.reaction-picker-modal.visible {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+/* Styling for the reaction emojis themselves */
+.reaction-options {
+    display: flex;
+    gap: 8px;
+    /* Spacing between the emojis */
+}
+
+.reaction-options span {
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    padding: 5px;
+    border-radius: 50%;
+    background-color: #f0f2f5;
+}
+
+.reaction-options span:hover {
+    background-color: #e4e6eb;
+    transform: scale(1.2);
+}
+
+/* --- تنسيقات إضافية لزر العودة --- */
+.back-button {
+    background-color: transparent;
+    border: none;
+    font-size: 1.5em;
+    color: #333;
+    cursor: pointer;
+    margin-left: 10px;
+    display: none;
+}
+
+
+
+
+
+
+
+
+@media (max-width: 768px) {
+
+    /* تجعل التطبيق يملأ الشاشة بالكامل */
+    .main-app-container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    /* القائمة الجانبية تأخذ كامل العرض */
+    .sidebar {
+        width: 100%;
+        border-right: none;
+    }
+
+    /* منطقة الدردشة تأخذ كامل العرض وتكون مخفية افتراضياً */
+    .chat-area-container {
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 100;
+        background-color: #ffffff;
+        display: none;
+        /* إخفاء منطقة الدردشة بشكل افتراضي */
+    }
+
+    /* إظهار منطقة الدردشة عند إضافة الكلاس show-chat-area */
+    .main-app-container.show-chat .sidebar {
+        display: none;
+    }
+
+    .main-app-container.show-chat .chat-area-container {
+        display: flex !important;
+        /* إظهار منطقة الدردشة */
+    }
+
+    /* إظهار زر العودة على الهاتف فقط */
+    .back-button {
+        display: block !important;
+    }
+}

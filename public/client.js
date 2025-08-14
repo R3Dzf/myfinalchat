@@ -1,5 +1,38 @@
 // chat-app/public/client.js
+// هذا الكود يمنع ظهور أي شيء في الـ Console
+// ضعه في بداية ملف client.js أو في وسم <script> في index.html
+// قبل أي سكريبت آخر يقوم بالطباعة.
 
+// يمكنك حفظ الدالة الأصلية إذا احتجت إليها لاحقاً
+// const originalConsoleLog = console.log;
+
+// This code prevents users from opening the developer tools
+document.addEventListener('contextmenu', event => event.preventDefault()); // Disables right-click
+document.addEventListener('keydown', function (event) {
+    // Disable F12
+    if (event.keyCode === 123) {
+        event.preventDefault();
+    }
+    // Disable Ctrl+Shift+I
+    if (event.ctrlKey && event.shiftKey && event.keyCode === 73) {
+        event.preventDefault();
+    }
+    // Disable Ctrl+Shift+C
+    if (event.ctrlKey && event.shiftKey && event.keyCode === 67) {
+        event.preventDefault();
+    }
+    // Disable Ctrl+U (view page source)
+    if (event.ctrlKey && event.keyCode === 85) {
+        event.preventDefault();
+    }
+});
+
+
+console.log = function () { };
+console.warn = function () { };
+console.error = function () { };
+console.info = function () { };
+console.debug = function () { };
 const socket = io();
 
 // الحصول على عناصر DOM
@@ -23,6 +56,8 @@ const currentUsernameSpan = document.getElementById('current-username-sidebar');
 const logoutButton = document.getElementById('logout-button');
 
 const conversationsList = document.getElementById('conversations-list');
+
+
 
 // عناصر لوظيفة البحث الجديدة
 const searchConversationsInput = document.getElementById('search-conversations-input');
@@ -54,13 +89,61 @@ const modalPrivateChatUsernameInput = document.getElementById('modal-private-cha
 const chatAreaHeader = document.getElementById('chat-area-header');
 const chatAreaContainer = document.getElementById('chat-area-container');
 
+
+const backButton = document.getElementById('back-to-conversations');
 let loggedInUsername = '';
 let currentConversationId = null;
+
+backButton.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+        chatContainer.classList.remove('show-chat');
+        chatAreaContainer.classList.add('hidden');
+    }
+});
+
+// منطق إرسال إشعار "يكتب..."
+input.addEventListener('input', () => {
+    if (!isTyping && currentConversationId) {
+        isTyping = true;
+        socket.emit('typing', { conversationId: currentConversationId, username: loggedInUsername });
+    }
+    // مسح المؤقت الحالي وإعادة ضبطه
+    if (typingTimeout) {
+        clearTimeout(typingTimeout);
+    }
+    // إرسال إشعار "توقف عن الكتابة" بعد 1.5 ثانية من التوقف
+    typingTimeout = setTimeout(() => {
+        isTyping = false;
+        socket.emit('stopped typing', { conversationId: currentConversationId, username: loggedInUsername });
+    }, 1500);
+});
+
+// معالج حدث لإظهار مؤشر الكتابة من المستخدمين الآخرين
+socket.on('user typing', (data) => {
+    // تأكد أن الإشعار خاص بالمحادثة الحالية وليس من المستخدم الحالي
+    if (data.conversationId === currentConversationId && data.username !== loggedInUsername) {
+        chatAreaHeader.textContent = `${data.username} يكتب...`;
+    }
+});
+
+// معالج حدث لإخفاء مؤشر الكتابة
+socket.on('user stopped typing', (data) => {
+    if (data.conversationId === currentConversationId) {
+        // إعادة عنوان المحادثة إلى الاسم الأصلي
+        const activeConvItem = document.querySelector(`.conversation-item[data-conversation-id="${currentConversationId}"]`);
+        if (activeConvItem) {
+            const convName = activeConvItem.querySelector('.conversation-name').textContent;
+            chatAreaHeader.textContent = convName;
+        }
+    }
+});
 
 // لتتبع حالة الاتصال للمستخدمين في الواجهة الأمامية
 const usersOnlineStatus = new Map(); // Stores userId -> isOnline (true/false)
 
-
+// لتتبع حالة الكتابة
+let isTyping = false;
+let typingTimeout = null;
 // --- دوال مساعدة ---
 
 function displayMessage(element, text, type) {
@@ -72,23 +155,35 @@ function displayMessage(element, text, type) {
     }, 5000);
 }
 
-function addChatMessage(username, message, timestamp) {
+function addChatMessage(username, message, timestamp, messageId) {
     const item = document.createElement('li');
     const time = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
     if (username === loggedInUsername) {
         item.classList.add('my-message');
+
+        // Logic to determine which icon to display based on deliveredAt and readAt
+
+        // This is a crucial addition to identify the message for updates
+        item.dataset.messageId = messageId;
+
+        item.innerHTML = `
+            <span class="message-meta">
+                <span class="timestamp"><bdi>${time}</bdi></span>
+                
+            </span>
+            <span class="message-content"><bdi>${message}</bdi></span>
+        `;
     } else {
         item.classList.add('other-message');
+        item.innerHTML = `
+            <span class="message-meta">
+                <strong><bdi>${username}</bdi></strong>
+                <span class="timestamp"><bdi>${time}</bdi></span>
+            </span>
+            <span class="message-content"><bdi>${message}</bdi></span>
+        `;
     }
-
-    item.innerHTML = `
-        <span class="message-meta">
-            <strong><bdi>${username}</bdi></strong>
-            <span class="timestamp"><bdi>${time}</bdi></span>
-        </span>
-        <span class="message-content"><bdi>${message}</bdi></span>
-    `;
 
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
@@ -103,12 +198,20 @@ async function getUserConversations() {
 }
 
 function loadConversationHistory(convId, convName) {
-    messages.innerHTML = ''; // مسح الرسائل القديمة عند التبديل
-    currentConversationId = convId; // تحديث معرف المحادثة النشطة
-    chatAreaHeader.textContent = convName; // تحديث عنوان منطقة الدردشة
-    chatAreaContainer.classList.remove('hidden'); // إظهار منطقة الدردشة
 
-    socket.emit('join conversation', convId); // إعلام الخادم بأن المستخدم انضم لهذه المحادثة
+    if (window.innerWidth <= 768) {
+        chatContainer.classList.add('show-chat');
+        chatAreaContainer.classList.remove('hidden');
+    }
+    messages.innerHTML = '';
+    currentConversationId = convId;
+    chatAreaHeader.textContent = convName;
+    chatAreaContainer.classList.remove('hidden');
+
+
+
+    socket.emit('join conversation', convId);
+    socket.emit('mark as read', convId);
 }
 
 // لعرض قائمة المحادثات في الشريط الجانبي مع مؤشر الحالة
@@ -134,10 +237,12 @@ function renderConversationsList(conversations) {
         let isOnlineForDisplay = false; // افتراضيًا
         let statusClass = 'offline'; // افتراضيًا
 
-        if (conv.type === 'private' && conv.otherUserId) { // otherUserId سيأتي من الخادم في كائن المحادثة
-            isOnlineForDisplay = usersOnlineStatus.has(conv.otherUserId) ? usersOnlineStatus.get(conv.otherUserId) : false;
-            statusClass = isOnlineForplay ? 'online' : 'offline';
-            li.dataset.otherUserId = conv.otherUserId; // تخزين otherUserId في dataset الـ li
+        // الكود المصحح في renderConversationsList
+        if (conv.type === 'private' && conv.otherUserId) {
+            // الآن، usersOnlineStatus.get(conv.otherUserId) سيعيد true أو false مباشرة
+            isOnlineForDisplay = usersOnlineStatus.get(conv.otherUserId) || false;
+            statusClass = isOnlineForDisplay ? 'online' : 'offline';
+            li.dataset.otherUserId = conv.otherUserId;
         } else if (conv.type === 'group') {
             statusClass = 'offline'; // افتراضي لمجموعات، يمكن تطويره لاحقاً
         }
@@ -160,7 +265,12 @@ function renderConversationsList(conversations) {
                 activeItem.classList.remove('active');
             }
             li.classList.add('active');
+
             loadConversationHistory(conv.id, conv.name);
+
+            // هذا هو التعديل الأساسي
+            // يتم إرسال الإشعار عندما يتم فتح المحادثة
+            socket.emit('mark as read', conv.id);
         });
         conversationsList.appendChild(li);
 
@@ -392,17 +502,52 @@ form.addEventListener('submit', (e) => {
     }
 });
 
+
+
 socket.on('receive message', (data) => {
-    if (data.conversationId === currentConversationId) {
-        addChatMessage(data.username, data.message, data.timestamp);
+    // Check if the message is from a conversation you're currently in.
+    const isCurrentConversation = (data.conversationId === currentConversationId);
+
+    // Add the message to the chat display
+    if (isCurrentConversation) {
+        // إضافة الرسالة إلى الشاشة
+        addChatMessage(data.username, data.message, data.timestamp, data.messageId, data.deliveredAt, data.readAt);
+
+        // عند استلام الرسالة، يتم إرسال إشعار "تم التسليم" إلى الخادم
+
+
+        // إذا كان المستخدم في نفس المحادثة، يتم إرسال إشعار "تمت القراءة" أيضًا
+        socket.emit('mark as read', data.conversationId);
+    }
+
+    // This block handles desktop notifications if the conversation isn't open or the tab isn't focused.
+    if (!isCurrentConversation || !document.hasFocus()) {
+        if (Notification.permission === "granted") {
+            const notification = new Notification(`رسالة جديدة من ${data.username}`, {
+                body: data.message,
+                icon: 'https://cdn-icons-png.flaticon.com/512/134/134914.png' // Using a generic icon
+            });
+            notification.onclick = function () {
+                window.focus();
+            };
+        }
     }
 });
+
+
+
+
+
+
+// في ملف client.js
+
 
 socket.on('conversation history', (data) => {
     if (data.conversationId === currentConversationId) {
         messages.innerHTML = '';
         data.history.forEach(msg => {
-            addChatMessage(msg.username, msg.message, msg.timestamp);
+            // يجب أن يتم تمرير جميع المعلمات، بما في ذلك messageId و deliveredAt
+            addChatMessage(msg.username, msg.message, msg.timestamp, msg.messageId, msg.deliveredAt, msg.readAt);
         });
     }
 });
@@ -429,12 +574,14 @@ socket.on('user status update', (data) => {
 });
 
 // معالج حدث لاستقبال جميع حالات الاتصال الأولية عند الاتصال
+// الكود المصحح في client.js
 socket.on('all online statuses', (statuses) => {
     usersOnlineStatus.clear();
     for (const userId in statuses) {
+        // نأخذ قيمة isOnline فقط
         usersOnlineStatus.set(parseInt(userId), statuses[userId].isOnline);
     }
-    console.log('Received all online statuses:', statuses);
+    console.log('Received all online statuses:', usersOnlineStatus);
     socket.emit('get user conversations'); // تطلب قائمة المحادثات مع حالات الاتصال المحدثة
 });
 
@@ -518,3 +665,18 @@ document.addEventListener('click', (event) => {
 
 
 document.addEventListener('DOMContentLoaded', checkAuthAndRender);
+
+// طلب إذن الإشعارات من المستخدم
+document.addEventListener('DOMContentLoaded', () => {
+    if (!("Notification" in window)) {
+        console.warn("هذا المتصفح لا يدعم إشعارات سطح المكتب.");
+    } else if (Notification.permission !== "denied" || Notification.permission === "default") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                console.log("تم منح إذن الإشعارات.");
+            }
+        });
+    }
+});
+
+

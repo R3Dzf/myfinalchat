@@ -34,12 +34,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// --- PostgreSQL Database Connection Setup ---
+// في ملف server.js
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // يجب أن يستخدم هذا دائماً في بيئة النشر
-    ssl: {
-        rejectUnauthorized: false
-    }
+    connectionString: process.env.DATABASE_URL
 });
 
 pool.connect()
@@ -174,6 +171,10 @@ app.get('/chat-history', async (req, res) => {
 
 // --- Socket.IO Logic for Real-time Chat & Conversations ---
 
+
+
+
+
 io.on('connection', async (socket) => {
     const userId = socket.request.session.userId;
     const username = socket.request.session.username;
@@ -202,48 +203,79 @@ io.on('connection', async (socket) => {
     socket.join(userId.toString()); // Each user joins a room named after their ID
 
     // Handle sending messages within a specific conversation
+    // chat-app/server.js
+
+    // في ملف server.js
     socket.on('send message', async (data) => {
         const { conversationId, messageText } = data;
-
         if (!conversationId || !messageText || !username || !userId) {
-            console.warn(`Incomplete or unauthorized message from ${username}:`, data);
-            socket.emit('error message', 'Failed to send message: Incomplete data.');
-            return;
+            return socket.emit('error message', 'Failed to send message: Incomplete data.');
         }
 
         try {
-            // Verify if the user is a participant of this conversation
             const participantCheck = await pool.query(
                 'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
                 [conversationId, userId]
             );
-
             if (participantCheck.rows.length === 0) {
-                console.warn(`🚫 User ${username} (ID: ${userId}) tried to send message to unauthorized conversation: ${conversationId}`);
-                socket.emit('error message', 'You are not authorized to send messages in this conversation.');
-                return;
+                return socket.emit('error message', 'You are not authorized to send messages in this conversation.');
             }
 
-            // Save the message to the database
-            await pool.query(
-                'INSERT INTO messages (conversation_id, user_id, username, message_text) VALUES ($1, $2, $3, $4)',
+            const savedMessageResult = await pool.query(
+                'INSERT INTO messages (conversation_id, user_id, username, message_text) VALUES ($1, $2, $3, $4) RETURNING id',
                 [conversationId, userId, username, messageText]
             );
-            console.log(`New message in conversation ${conversationId} from ${username}: "${messageText}"`);
+            const newMessageId = savedMessageResult.rows[0].id;
+            console.log(`New message in conversation ${conversationId} from ${username} with ID: ${newMessageId}`);
 
-            // Emit the message to all participants in that conversation's room
+            const participantsResult = await pool.query(
+                'SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2',
+                [conversationId, userId]
+            );
+            const recipientUserId = participantsResult.rows[0].user_id;
+
+            // إرسال الرسالة إلى جميع المشاركين في الغرفة
             io.to(conversationId.toString()).emit('receive message', {
                 conversationId: conversationId,
+                messageId: newMessageId,
                 username: username,
                 message: messageText,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                // هذه القيم ستكون null عند الإرسال
+                deliveredAt: null,
+                readAt: null
             });
+
+            // هذا هو الجزء الأهم:
+            // إذا كان المستلم متصلاً (لديه أي sockets نشطة)، قم بتحديث حالة التسليم.
+
 
         } catch (error) {
             console.error('❌ Error saving or sending message:', error);
             socket.emit('error message', 'An error occurred while sending the message.');
         }
     });
+
+
+
+
+
+    socket.on('typing', (data) => {
+        // بث إشعار الكتابة لجميع المستخدمين في الغرفة باستثناء المرسل
+        socket.to(data.conversationId.toString()).emit('user typing', data);
+        console.log(`[Socket.IO] ${data.username} is typing in conversation ${data.conversationId}`);
+    });
+
+    // معالج حدث "توقف عن الكتابة"
+    socket.on('stopped typing', (data) => {
+        // بث إشعار التوقف عن الكتابة لجميع المستخدمين في الغرفة باستثناء المرسل
+        socket.to(data.conversationId.toString()).emit('user stopped typing', data);
+        console.log(`[Socket.IO] ${data.username} stopped typing in conversation ${data.conversationId}`);
+    });
+
+
+
+
 
 
     // Handle user joining a specific conversation room
@@ -274,13 +306,14 @@ io.on('connection', async (socket) => {
 
             // Fetch and emit conversation history for this specific conversation
             const result = await pool.query(
-                'SELECT username, message_text, timestamp FROM messages WHERE conversation_id = $1 ORDER BY timestamp ASC',
+                'SELECT id, username, message_text, timestamp FROM messages WHERE conversation_id = $1 ORDER BY timestamp ASC',
                 [conversationId]
             );
             const messagesHistory = result.rows.map(row => ({
                 username: row.username,
                 message: row.message_text,
-                timestamp: row.timestamp.toISOString()
+                timestamp: row.timestamp.toISOString(),
+
             }));
 
             socket.emit('conversation history', { conversationId: conversationId, history: messagesHistory });
